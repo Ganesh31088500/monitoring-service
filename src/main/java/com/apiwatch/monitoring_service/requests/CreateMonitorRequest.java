@@ -42,5 +42,25 @@ public class CreateMonitorRequest {
 
     @Size(max = 5000)
     private String expectedResponse;
+    @NotNull
+    private Boolean emailAlert;
+
+    @NotNull
+    private Boolean slackAlert;
+
+    @NotNull
+    private Boolean teamsAlert;
+
+    @NotNull
+    private Boolean webhookAlert;
+
+    @NotNull
+    private Boolean notifyOnRecovery;
+
+    private Integer retryCount;
+
+    private Integer failureThreshold;
+
+    private String description;
 
 }

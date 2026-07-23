@@ -111,7 +111,7 @@ public class MonitorServiceImpl implements MonitorService {
         log.info("Monitor Created Successfully : {}",
                 savedMonitor.getId());
 
-        return monitorMapper.toResponse(savedMonitor);
+        return buildMonitorResponse(savedMonitor);
 
     }
     @Override
@@ -128,7 +128,7 @@ public class MonitorServiceImpl implements MonitorService {
                                 new MonitorNotFoundException(
                                         "Monitor not found."));
 
-        return monitorMapper.toResponse(monitor);
+        return buildMonitorResponse(monitor);
 
     }
     @Override
@@ -138,11 +138,8 @@ public class MonitorServiceImpl implements MonitorService {
         log.info("Fetching all monitors");
 
         return monitorRepository.findAll()
-
                 .stream()
-
-                .map(monitorMapper::toResponse)
-
+                .map(this::buildMonitorResponse)
                 .toList();
 
     }
@@ -171,7 +168,7 @@ public class MonitorServiceImpl implements MonitorService {
 
                 .stream()
 
-                .map(monitorMapper::toResponse)
+                .map(this::buildMonitorResponse)
 
                 .toList();
 
@@ -253,7 +250,7 @@ public class MonitorServiceImpl implements MonitorService {
         log.info("Monitor updated successfully : {}",
                 updatedMonitor.getId());
 
-        return monitorMapper.toResponse(updatedMonitor);
+        return buildMonitorResponse(updatedMonitor);
 
     }
     @Override
@@ -288,35 +285,52 @@ public class MonitorServiceImpl implements MonitorService {
 
         Double average =
                 monitorExecutionRepository.getAverageResponseTime(apiId);
+
         List<MonitorExecution> executions =
                 monitorExecutionRepository.findLatestExecution(apiId);
 
         MonitorExecution latest =
                 executions.isEmpty() ? null : executions.get(0);
 
-        long success = monitorExecutionRepository.countByApiIdAndStatus(
-                apiId,
-                MonitorStatus.SUCCESS);
+        long success =
+                monitorExecutionRepository.countByApiIdAndStatus(
+                        apiId,
+                        MonitorStatus.SUCCESS);
 
-        long failure = monitorExecutionRepository.countByApiIdAndStatus(
-                apiId,
-                MonitorStatus.FAILED);
+        long failure =
+                monitorExecutionRepository.countByApiIdAndStatus(
+                        apiId,
+                        MonitorStatus.FAILED);
+
+        // Calculate availability
+        Double availability =
+                (success + failure) == 0
+                        ? 0.0
+                        : (success * 100.0) / (success + failure);
 
         return MonitorStatisticsResponse.builder()
 
                 .averageResponseTime(
-                        latest == null
+                        latest == null || average == null
                                 ? 0L
                                 : Math.round(average))
 
                 .lastExecution(
-                		latest == null  //latest cannot be resolved to a variable
+                        latest == null
                                 ? null
                                 : latest.getExecutedAt())
 
+                .lastStatus(
+                        latest == null
+                                ? null
+                                : latest.getStatus())
+
+                .availability(availability)
+
                 .successCount(success)
+
                 .failureCount(failure)
-                
+
                 .build();
     }
     @Override
@@ -353,7 +367,7 @@ public class MonitorServiceImpl implements MonitorService {
         MonitorExecution execution = new MonitorExecution();
 
         execution.setMonitor(monitor);
-
+        execution.setApiId(monitor.getApiId());   // <-- ADD THIS
         execution.setExecutedAt(LocalDateTime.now());
 
         try {
@@ -577,7 +591,7 @@ public class MonitorServiceImpl implements MonitorService {
 
             log.info("Monitor already enabled.");
 
-            return monitorMapper.toResponse(monitor);
+            return buildMonitorResponse(monitor);
 
         }
 
@@ -588,7 +602,7 @@ public class MonitorServiceImpl implements MonitorService {
 
         log.info("Monitor enabled successfully.");
 
-        return monitorMapper.toResponse(updatedMonitor);
+        return buildMonitorResponse(updatedMonitor);
 
     }
     @Override
@@ -607,7 +621,7 @@ public class MonitorServiceImpl implements MonitorService {
 
             log.info("Monitor already disabled.");
 
-            return monitorMapper.toResponse(monitor);
+            return buildMonitorResponse(monitor);
 
         }
 
@@ -618,7 +632,7 @@ public class MonitorServiceImpl implements MonitorService {
 
         log.info("Monitor disabled successfully.");
 
-        return monitorMapper.toResponse(updatedMonitor);
+        return buildMonitorResponse(updatedMonitor);
 
     }
     @Override
@@ -634,5 +648,57 @@ public class MonitorServiceImpl implements MonitorService {
 
                 .toList();
     }
+    private MonitorResponse buildMonitorResponse(Monitor monitor) {
+
+        ApiResponse api = apiServiceClient.getApi(monitor.getApiId());
+
+        MonitorStatisticsResponse statistics =
+                getStatistics(monitor.getApiId());
+
+        return MonitorResponse.builder()
+
+                .id(monitor.getId())
+
+                .projectId(api.getProjectId())
+                .projectName(api.getProjectName())
+
+                .apiId(api.getId())
+                .apiName(api.getName())
+
+                .name(monitor.getName())
+                .description(monitor.getDescription())
+
+                .monitorType(monitor.getMonitorType())
+                .interval(monitor.getInterval())
+
+                .timeoutSeconds(monitor.getTimeoutSeconds())
+
+                .retryCount(monitor.getRetryCount())
+                .failureThreshold(monitor.getFailureThreshold())
+
+                .expectedStatus(monitor.getExpectedStatus())
+                .expectedResponse(monitor.getExpectedResponse())
+
+                .emailAlert(monitor.getEmailAlert())
+                .slackAlert(monitor.getSlackAlert())
+                .teamsAlert(monitor.getTeamsAlert())
+                .webhookAlert(monitor.getWebhookAlert())
+                .notifyOnRecovery(monitor.getNotifyOnRecovery())
+
+                .enabled(monitor.getEnabled())
+
+                .lastStatus(statistics.getLastStatus())
+                .availability(statistics.getAvailability())
+                .averageResponseTime(
+                    statistics.getAverageResponseTime() == null
+                        ? 0.0
+                        : statistics.getAverageResponseTime().doubleValue())
+                .lastExecution(statistics.getLastExecution())
+
+                .createdAt(monitor.getCreatedAt())
+                .updatedAt(monitor.getUpdatedAt())
+
+                .build();
     
+}
 }

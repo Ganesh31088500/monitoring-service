@@ -47,5 +47,21 @@ public class Monitor extends BaseEntity {
 
     @Column(nullable = false)
     private Boolean enabled;
+    
+    private String description;
+
+    private Integer retryCount;
+
+    private Integer failureThreshold;
+    @Column(nullable = false)
+    private Boolean emailAlert;
+    @Column(nullable = false)
+    private Boolean slackAlert;
+    @Column(nullable = false)
+    private Boolean teamsAlert;
+    @Column(nullable = false)
+    private Boolean webhookAlert;
+    @Column(nullable = false)
+    private Boolean notifyOnRecovery;
 
 }

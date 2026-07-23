@@ -16,6 +16,7 @@ public class ApiResponse {
     private UUID id;
 
     private UUID projectId;
+    private String projectName;
 
     private String name;
 

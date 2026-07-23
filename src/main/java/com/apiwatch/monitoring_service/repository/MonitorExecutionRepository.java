@@ -20,6 +20,7 @@ public interface MonitorExecutionRepository
      */
     List<MonitorExecution> findByMonitorOrderByExecutedAtDesc(
             Monitor monitor);
+    List<MonitorExecution> findByMonitorId(UUID monitorId);
 
     /**
      * Latest 10 executions

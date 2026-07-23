@@ -25,7 +25,6 @@ public interface MonitorMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedBy", ignore = true)
-
     Monitor toEntity(CreateMonitorRequest request);
 
     /**
